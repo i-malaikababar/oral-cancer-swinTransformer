@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Prediction details · OralScan{% endblock %}
+{% block content %}
+<div class="page-heading"><div><div class="eyebrow"><span></span> SAVED PREDICTION</div><h1>Analysis <em>result.</em></h1><p>Saved {{ record.created_at[:16].replace('T',' ') }} · {{ record.original_filename }}</p></div><a class="secondary-button link-button" href="{{ url_for('history') }}">← Back to history</a></div>
+<div class="result-layout">
+  <section class="panel result-image-panel"><div class="panel-heading"><div><div class="step-label">UPLOADED IMAGE</div><h2>Image preview</h2></div></div><img class="result-image" src="{{ url_for('prediction_image', prediction_id=record.id) }}" alt="Uploaded image"></section>
+  <section class="panel result-panel"><div class="panel-heading"><div><div class="step-label">MODEL PREDICTION</div><h2>Prediction result</h2></div><span class="heading-tag">SAVED</span></div>
+    <div class="prediction-banner {{ 'cancer-banner' if record.prediction == 'CANCER' else 'noncancer-banner' }}"><span class="prediction-dot"></span><div><small>Predicted category</small><h2>{{ record.prediction }}</h2></div></div>
+    <div class="metric"><div><span>Confidence score</span><strong>{{ "%.2f"|format(record.confidence) }}%</strong></div><div class="progress"><span style="width:{{ [record.confidence, 100]|min }}%"></span></div></div>
+    <div class="metric"><div><span>Cancer probability</span><strong>{{ "%.2f"|format(record.cancer_probability) }}%</strong></div><div class="progress"><span style="width:{{ [record.cancer_probability, 100]|min }}%"></span></div></div>
+    <div class="metric"><div><span>Non-Cancer probability</span><strong>{{ "%.2f"|format(record.non_cancer_probability) }}%</strong></div><div class="progress"><span style="width:{{ [record.non_cancer_probability, 100]|min }}%"></span></div></div>
+    <div class="warning-note"><strong>Important</strong><p>This experimental model is not a medical diagnosis. Consult a qualified healthcare professional for concerns.</p></div>
+    <form method="post" action="{{ url_for('delete_prediction', prediction_id=record.id) }}" onsubmit="return confirm('Delete this prediction and its image? This cannot be undone.');"><button class="secondary-button danger-button" type="submit">Delete this saved result</button></form>
+  </section>
+</div>
+{% endblock %}

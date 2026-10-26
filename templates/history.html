@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}My history · OralScan{% endblock %}
+{% block content %}
+<section class="page-heading"><div><div class="eyebrow"><span></span> YOUR PRIVATE RECORDS</div><h1>Prediction <em>history.</em></h1><p>Only you can access the images and results saved to your account.</p></div><a class="primary-button compact-button" href="{{ url_for('home') }}">+ New analysis</a></section>
+{% if records %}
+<div class="history-grid">
+{% for record in records %}
+  <article class="panel history-card">
+    <a href="{{ url_for('prediction_detail', prediction_id=record.id) }}" class="history-image"><img src="{{ url_for('prediction_image', prediction_id=record.id) }}" alt="Uploaded image for prediction {{ record.id }}"></a>
+    <div class="history-card-body">
+      <div class="history-card-top"><span class="status-pill {{ 'cancer' if record.prediction == 'CANCER' else 'noncancer' }}">{{ record.prediction }}</span><span class="muted small-text">{{ record.created_at[:16].replace('T',' ') }}</span></div>
+      <h3>{{ record.original_filename }}</h3>
+      <div class="confidence-line"><span>Confidence</span><strong>{{ "%.2f"|format(record.confidence) }}%</strong></div>
+      <div class="progress"><span style="width:{{ [record.confidence, 100]|min }}%"></span></div>
+      <div class="card-actions"><a href="{{ url_for('prediction_detail', prediction_id=record.id) }}">View result →</a><form method="post" action="{{ url_for('delete_prediction', prediction_id=record.id) }}" onsubmit="return confirm('Delete this prediction and its saved image? This cannot be undone.');"><button class="text-button danger-text" type="submit">Delete</button></form></div>
+    </div>
+  </article>
+{% endfor %}
+</div>
+{% else %}
+<section class="panel empty-state"><div class="empty-icon">◷</div><h2>No saved predictions yet</h2><p>When you analyze an image, its result will appear here.</p><a class="primary-button compact-button" href="{{ url_for('home') }}">Analyze your first image →</a></section>
+{% endif %}
+{% endblock %}

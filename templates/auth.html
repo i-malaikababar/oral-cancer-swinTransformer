@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Create account' if mode == 'signup' else 'Log in' }} · OralScan{% endblock %}
+{% block content %}
+<section class="auth-layout">
+  <div class="auth-intro">
+    <div class="eyebrow"><span></span> AI IMAGE CLASSIFICATION DEMO</div>
+    <h1>Oral image analysis,<br><em>made simpler.</em></h1>
+    <p>Sign in to analyze an image and securely revisit your saved prediction history.</p>
+    <div class="auth-points"><div>✦ <span>Private prediction history</span></div><div>✦ <span>Upload or capture an image</span></div><div>✦ <span>Results saved to your account</span></div></div>
+  </div>
+  <section class="panel auth-card">
+    <div class="step-label">YOUR ACCOUNT</div>
+    <h2>{{ 'Create your account' if mode == 'signup' else 'Welcome back' }}</h2>
+    <p class="muted">{{ 'Create an account to get started.' if mode == 'signup' else 'Log in to continue to OralScan.' }}</p>
+    <form method="post" class="auth-form">
+      <label>Username<input name="username" minlength="3" maxlength="32" autocomplete="username" required placeholder="Choose a username"></label>
+      <label>Password<input type="password" name="password" minlength="8" autocomplete="{{ 'new-password' if mode == 'signup' else 'current-password' }}" required placeholder="At least 8 characters"></label>
+      {% if mode == 'signup' %}<label>Confirm password<input type="password" name="confirm_password" minlength="8" autocomplete="new-password" required placeholder="Enter password again"></label>{% endif %}
+      <button class="primary-button" type="submit">{{ 'Create account' if mode == 'signup' else 'Log in' }} <span>→</span></button>
+    </form>
+    <p class="auth-switch">{% if mode == 'signup' %}Already registered? <a href="{{ url_for('login') }}">Log in</a>{% else %}New to OralScan? <a href="{{ url_for('signup') }}">Create an account</a>{% endif %}</p>
+    <p class="privacy-note">Your images and results are saved until you delete them. Do not upload images you are not comfortable storing.</p>
+  </section>
+</section>
+{% endblock %}

@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}Analyze image · OralScan{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="eyebrow"><span></span> IMAGE CLASSIFICATION DEMO</div>
+  <h1>Oral image analysis,<br><em>made simpler.</em></h1>
+  <p>Upload an oral image or capture one with your camera to view the model's predicted category and confidence score.</p>
+</section>
+<div class="workspace">
+  <section class="panel upload-panel">
+    <div class="panel-heading"><div><div class="step-label">STEP 01</div><h2>Upload an image</h2></div><span class="heading-icon">↑</span></div>
+    <form method="POST" action="{{ url_for('analyze') }}" enctype="multipart/form-data" id="upload-form">
+      <label class="dropzone" for="image-input" id="dropzone">
+        <span class="upload-icon">▧</span><strong>Drop your image here</strong><span>or <em>browse files</em> from your device</span><small>JPG, JPEG, PNG or WEBP · Max 8 MB</small>
+        <input type="file" name="image" id="image-input" accept=".jpg,.jpeg,.png,.webp,image/*" required>
+      </label>
+      <div class="file-preview" id="file-preview" hidden><img id="preview-image" alt="Selected image preview"><div class="file-meta"><strong id="file-name">image.jpg</strong><small>Ready to analyze</small></div><button type="button" class="text-button" id="clear-file">Remove</button></div>
+      <div class="or-divider"><span>OR USE YOUR CAMERA</span></div>
+      <div class="camera-box">
+        <div class="camera-controls"><label class="camera-select-label" for="camera-choice">Camera</label><select id="camera-choice"><option value="environment">Back camera</option><option value="user">Front camera</option></select></div>
+        <video id="camera-video" autoplay playsinline muted hidden></video>
+        <canvas id="camera-canvas" hidden></canvas>
+        <img id="captured-photo" alt="Captured image preview" hidden>
+        <div class="camera-placeholder" id="camera-placeholder"><span>◎</span><strong>Use your device camera</strong><small>Camera access is requested only when you start it.</small></div>
+        <div class="camera-actions"><button type="button" class="secondary-button" id="start-camera">Start camera</button><button type="button" class="secondary-button" id="capture-photo" disabled>Capture photo</button><button type="button" class="secondary-button" id="retake-photo" hidden>Retake</button><button type="button" class="secondary-button" id="stop-camera" hidden>Stop camera</button></div>
+        <p id="camera-message" class="muted small-text" aria-live="polite"></p>
+      </div>
+      <button class="primary-button analyze-button" type="submit">Analyze image <span>→</span></button>
+      <p class="privacy-note">▱ Your image and result are saved to your account history until you delete them.</p>
+    </form>
+  </section>
+  <aside class="panel info-panel">
+    <div class="panel-heading"><div><div class="step-label">YOUR WORKSPACE</div><h2>Prediction history</h2></div><span class="heading-tag">PRIVATE</span></div>
+    <div class="history-illustration"><div class="history-symbol">◷</div><h3>Your results, all in one place</h3><p>Every analysis is saved to your account so you can return to it later.</p><a class="secondary-button link-button" href="{{ url_for('history') }}">View my history →</a></div>
+    <div class="info-note"><strong>About this model</strong><p>OralScan uses a fine-tuned Swin Transformer to classify submitted images as Cancer or Non-Cancer.</p></div>
+    <div class="warning-note"><strong>Important</strong><p>This is an experimental research model, not a medical diagnosis. Do not use it to make healthcare decisions. Consult a qualified healthcare professional for concerns.</p></div>
+  </aside>
+</div>
+<script>
+(() => {
+  const form = document.getElementById('upload-form');
+  const input = document.getElementById('image-input');
+  const dropzone = document.getElementById('dropzone');
+  const previewWrap = document.getElementById('file-preview');
+  const previewImage = document.getElementById('preview-image');
+  const fileName = document.getElementById('file-name');
+  const clearFile = document.getElementById('clear-file');
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-canvas');
+  const captured = document.getElementById('captured-photo');
+  const placeholder = document.getElementById('camera-placeholder');
+  const choice = document.getElementById('camera-choice');
+  const startBtn = document.getElementById('start-camera');
+  const captureBtn = document.getElementById('capture-photo');
+  const retakeBtn = document.getElementById('retake-photo');
+  const stopBtn = document.getElementById('stop-camera');
+  const message = document.getElementById('camera-message');
+  let stream = null;
+  let capturedFile = null;
+  let previewUrl = null;
+
+  function showFile(file) {
+    if (!file) return;
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = URL.createObjectURL(file);
+    previewImage.src = previewUrl;
+    fileName.textContent = file.name;
+    previewWrap.hidden = false;
+    dropzone.classList.add('has-file');
+  }
+  input.addEventListener('change', () => {
+    capturedFile = null;
+    showFile(input.files[0]);
+    if (input.files[0]) message.textContent = '';
+  });
+  clearFile.addEventListener('click', () => {
+    input.value = '';
+    capturedFile = null;
+    previewWrap.hidden = true;
+    dropzone.classList.remove('has-file');
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = null;
+    previewImage.removeAttribute('src');
+  });
+  ['dragenter','dragover'].forEach(evt => dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add('dragover'); }));
+  ['dragleave','drop'].forEach(evt => dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('dragover'); }));
+  dropzone.addEventListener('drop', e => {
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      const transfer = new DataTransfer(); transfer.items.add(file); input.files = transfer.files;
+      capturedFile = null; showFile(file);
+    }
+  });
+  async function stopCamera() {
+    if (stream) stream.getTracks().forEach(track => track.stop());
+    stream = null;
+    video.srcObject = null;
+    video.hidden = true;
+    captureBtn.disabled = true;
+    startBtn.hidden = false;
+    stopBtn.hidden = true;
+    placeholder.hidden = false;
+  }
+  startBtn.addEventListener('click', async () => {
+    try {
+      await stopCamera();
+      stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:choice.value}}, audio:false});
+      video.srcObject = stream;
+      video.hidden = false;
+      placeholder.hidden = true;
+      captured.hidden = true;
+      captureBtn.disabled = false;
+      startBtn.hidden = true;
+      stopBtn.hidden = false;
+      message.textContent = 'Camera ready. Position the image and capture.';
+    } catch (err) {
+      message.textContent = 'Camera could not start. Allow camera permission and use localhost or HTTPS.';
+    }
+  });
+  choice.addEventListener('change', async () => {
+    if (stream) startBtn.click();
+  });
+  captureBtn.addEventListener('click', async () => {
+    if (!stream || !video.videoWidth) return;
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+    if (!blob) { message.textContent = 'Could not capture photo. Please try again.'; return; }
+    capturedFile = new File([blob], 'oralscan-camera-capture.jpg', {type:'image/jpeg'});
+    const transfer = new DataTransfer(); transfer.items.add(capturedFile); input.files = transfer.files;
+    showFile(capturedFile);
+    captured.src = URL.createObjectURL(blob); captured.hidden = true;
+    await stopCamera();
+    placeholder.hidden = true;
+    retakeBtn.hidden = false;
+    startBtn.hidden = true;
+    message.textContent = 'Photo captured. Preview it above, then analyze or retake.';
+  });
+  retakeBtn.addEventListener('click', async () => {
+    retakeBtn.hidden = true;
+    await startBtn.click();
+  });
+  stopBtn.addEventListener('click', async () => { await stopCamera(); message.textContent = 'Camera stopped.'; });
+  form.addEventListener('submit', e => {
+    if (!input.files.length) { e.preventDefault(); message.textContent = 'Choose an image or capture a photo first.'; }
+  });
+  window.addEventListener('beforeunload', () => { if (stream) stream.getTracks().forEach(track => track.stop()); });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% block title %}Not found · OralScan{% endblock %}
+{% block content %}<section class="panel empty-state"><h1>Record not found</h1><p>This record may have been deleted or may not belong to your account.</p><a class="primary-button compact-button" href="{{ url_for('history') }}">Back to history</a></section>{% endblock %}
